@@ -2,6 +2,7 @@ package com.bradleege.gowhereisay;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.graphics.Color;
 import android.speech.RecognizerIntent;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -9,10 +10,16 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+import com.mapbox.directions.DirectionsCriteria;
+import com.mapbox.directions.MapboxDirections;
+import com.mapbox.directions.service.models.DirectionsResponse;
+import com.mapbox.directions.service.models.DirectionsRoute;
+import com.mapbox.directions.service.models.Waypoint;
 import com.mapbox.geocoder.MapboxGeocoder;
 import com.mapbox.geocoder.service.models.GeocoderFeature;
 import com.mapbox.geocoder.service.models.GeocoderResponse;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
@@ -40,9 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
         mapView = (MapView) findViewById(R.id.mapView);
         mapView.setStyle(Style.MAPBOX_STREETS);
-        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(pikePlaceLatLng).zoom(12).build()));
-
-        mapView.addMarker(new MarkerOptions().position(pikePlaceLatLng).title("Pike Place Market"));
+        resetMap();
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -130,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
                     ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     Log.i(TAG, "results text = " + text);
                     if (text.size() > 0) {
-                        searchForDirections(text.get(0));
+                        searchForEndpointCoordinates(text.get(0));
                     } else {
                         Toast.makeText(getApplicationContext(),
                                 "We had a failure to communicate.",
@@ -144,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void searchForDirections(final String endpoint) {
+    private void searchForEndpointCoordinates(final String endpoint) {
 
         // Get Coordinates For Endpoint
         MapboxGeocoder client = new MapboxGeocoder.Builder()
@@ -160,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
                 List<GeocoderFeature> results = response.body().getFeatures();
                 if (results.size() > 0) {
                     Log.i(TAG, "Coordinates = " + results.get(0).getLatitude() + ", " + results.get(0).getLongitude());
+                    searchForDirections(results.get(0));
                 } else {
                     Toast.makeText(getApplicationContext(),
                             "Couldn't find a coordinate for '" + endpoint + "'",
@@ -174,5 +180,71 @@ public class MainActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void searchForDirections(final GeocoderFeature endpointFeature) {
+
+        Waypoint origin = new Waypoint(pikePlaceLatLng.getLongitude(), pikePlaceLatLng.getLatitude());
+        Waypoint destination = new Waypoint(endpointFeature.getLongitude(), endpointFeature.getLatitude());
+
+        MapboxDirections md = new MapboxDirections.Builder()
+                .setAccessToken(getString(R.string.mapbox_access_token))
+                .setOrigin(origin)
+                .setDestination(destination)
+                .setProfile(DirectionsCriteria.PROFILE_WALKING)
+                .build();
+
+        md.enqueue(new Callback<DirectionsResponse>() {
+            @Override
+            public void onResponse(Response<DirectionsResponse> response, Retrofit retrofit) {
+
+                // Print some info about the route
+                DirectionsRoute firstRoute = response.body().getRoutes().get(0);
+                Log.i(TAG, "Distance: " + firstRoute.getDistance());
+                Log.i(TAG, (String.format("Route is %d meters long.", firstRoute.getDistance())));
+
+                // Draw the route on the map
+                drawRoute(firstRoute);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Toast.makeText(getApplicationContext(),
+                        "Failure occurred while trying to find directions for '" + endpointFeature.getPlaceName() + "'",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void drawRoute(DirectionsRoute route) {
+
+        resetMap();
+
+        // Convert List<Waypoint> into LatLng[]
+        List<Waypoint> waypoints = route.getGeometry().getWaypoints();
+        LatLng[] point = new LatLng[waypoints.size()];
+        for (int i = 0; i < waypoints.size(); i++) {
+            point[i] = new LatLng(
+                    waypoints.get(i).getLatitude(),
+                    waypoints.get(i).getLongitude());
+
+            // Display End Marker
+            if (i == waypoints.size() - 1) {
+                mapView.addMarker(new MarkerOptions().position(point[i]).title("Endpoint"));
+            }
+        }
+
+        // Draw Points on MapView
+        mapView.addPolyline(new PolylineOptions()
+                .add(point)
+                .color(Color.parseColor("#3887be"))
+                .width(5));
+    }
+
+    private void resetMap() {
+        mapView.removeAllAnnotations();
+        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(pikePlaceLatLng).zoom(12).build()));
+
+        mapView.addMarker(new MarkerOptions().position(pikePlaceLatLng).title("Pike Place Market"));
     }
 }
