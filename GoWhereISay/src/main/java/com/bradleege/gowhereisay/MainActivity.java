@@ -135,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
                     ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     Log.i(TAG, "results text = " + text);
                     if (text.size() > 0) {
+                        resetMap();
                         searchForEndpointCoordinates(text.get(0));
                     } else {
                         Toast.makeText(getApplicationContext(),
@@ -203,6 +204,17 @@ public class MainActivity extends AppCompatActivity {
                 Log.i(TAG, "Distance: " + firstRoute.getDistance());
                 Log.i(TAG, (String.format("Route is %d meters long.", firstRoute.getDistance())));
 
+                resetMap();
+
+                // Put the Destination on the map
+                mapView.addMarker(new MarkerOptions().position(new LatLng(endpointFeature.getLatitude(), endpointFeature.getLongitude())).title(endpointFeature.getPlaceName()).snippet(endpointFeature.getText()));
+
+                // Center Route On Map
+                LatLng center = new LatLng(
+                        (pikePlaceLatLng.getLatitude() + endpointFeature.getLatitude()) / 2,
+                        (pikePlaceLatLng.getLongitude() + endpointFeature.getLongitude()) / 2);
+                mapView.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(center).build()));
+
                 // Draw the route on the map
                 drawRoute(firstRoute);
             }
@@ -218,8 +230,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void drawRoute(DirectionsRoute route) {
 
-        resetMap();
-
         // Convert List<Waypoint> into LatLng[]
         List<Waypoint> waypoints = route.getGeometry().getWaypoints();
         LatLng[] point = new LatLng[waypoints.size()];
@@ -228,10 +238,6 @@ public class MainActivity extends AppCompatActivity {
                     waypoints.get(i).getLatitude(),
                     waypoints.get(i).getLongitude());
 
-            // Display End Marker
-            if (i == waypoints.size() - 1) {
-                mapView.addMarker(new MarkerOptions().position(point[i]).title("Endpoint"));
-            }
         }
 
         // Draw Points on MapView
