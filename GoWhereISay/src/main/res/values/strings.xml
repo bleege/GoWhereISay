@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">GoWhereISay</string>
+    <string name="app_name">Go Where I Say</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoiYmxlZWdlIiwiYSI6ImNpano0YnhwaDJkNzR2M2x6enlsaXQzdGoifQ.XwdGdRPVksyJMpv4kmUJsg</string>
 </resources>
