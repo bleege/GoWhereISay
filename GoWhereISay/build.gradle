@@ -29,4 +29,7 @@ dependencies {
     compile ('com.mapbox.mapboxsdk:mapbox-android-directions:1.0.0@aar'){
         transitive=true
     }
+    compile ('com.mapbox.mapboxsdk:mapbox-android-geocoder:1.0.0@aar'){
+        transitive=true
+    }
 }
