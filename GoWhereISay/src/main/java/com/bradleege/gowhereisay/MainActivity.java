@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
+import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
@@ -45,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
     private MapView mapView;
     private MapboxMap mapboxMap;
+    private Marker destinationMarker;
     private static final LatLng pikePlaceLatLng = new LatLng(47.60865, -122.34052);
 
     @Override
@@ -232,7 +234,7 @@ public class MainActivity extends AppCompatActivity {
 
                     resetMap();
 
-                    mapboxMap.addMarker(new MarkerOptions().position(new LatLng(endpointFeature.asPosition().getLatitude(), endpointFeature.asPosition().getLongitude())).title(endpointFeature.getPlaceName()).snippet(endpointFeature.getText()));
+                    destinationMarker = mapboxMap.addMarker(new MarkerOptions().position(new LatLng(endpointFeature.asPosition().getLatitude(), endpointFeature.asPosition().getLongitude())).title(endpointFeature.getPlaceName()).snippet(endpointFeature.getText()));
 
                     // Center Route On Map
                     LatLng center = new LatLng(
@@ -276,6 +278,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void resetMap() {
+        if (destinationMarker != null) {
+            mapboxMap.removeMarker(destinationMarker);
+        }
         mapboxMap.removeAnnotations();
         mapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(pikePlaceLatLng).zoom(12).build()));
         mapboxMap.addMarker(new MarkerOptions().position(pikePlaceLatLng).title("Pike Place Market"));
